@@ -13,28 +13,39 @@ class ConflictError extends Error {}
 
 export const inventoryService = {
   // ---- Warehouses ----
-  listWarehouses: (iasCompanyId: number) => inventoryRepository.listWarehouses(iasCompanyId),
+  listWarehouses: (iasCompanyId: number) =>
+    inventoryRepository.listWarehouses(iasCompanyId),
 
-  createWarehouse: async (iasCompanyId: number, input: CreateWarehouseInput) => {
+  createWarehouse: async (
+    iasCompanyId: number,
+    input: CreateWarehouseInput,
+  ) => {
     try {
       return await inventoryRepository.createWarehouse(iasCompanyId, input);
     } catch (error) {
       if (isUniqueViolation(error)) {
-        throw new ConflictError(`Warehouse code "${input.code}" already exists`);
+        throw new ConflictError(
+          `Warehouse code "${input.code}" already exists`,
+        );
       }
       throw error;
     }
   },
 
   getWarehouseOrThrow: async (id: number, iasCompanyId: number) => {
-    const warehouse = await inventoryRepository.findWarehouseById(id, iasCompanyId);
+    const warehouse = await inventoryRepository.findWarehouseById(
+      id,
+      iasCompanyId,
+    );
     if (!warehouse) throw new NotFoundError("Warehouse not found");
     return warehouse;
   },
 
   // ---- Products ----
-  listProducts: (iasCompanyId: number, status?: "ACTIVE" | "ARCHIVED") =>
-    inventoryRepository.listProducts(iasCompanyId, status),
+  listProducts: (iasCompanyId: number, status?: "ACTIVE" | "ARCHIVED") => {
+    const products = inventoryRepository.listProducts(iasCompanyId, status);
+    return products;
+  },
 
   getProduct: async (id: number, iasCompanyId: number) => {
     const product = await inventoryRepository.findProductById(id, iasCompanyId);
@@ -43,7 +54,9 @@ export const inventoryService = {
     const stockByWarehouse = await inventoryRepository.getStockByWarehouse(id);
     const withAvailability = stockByWarehouse.map((row) => ({
       ...row,
-      availableQuantity: (Number(row.quantity) - Number(row.reservedQuantity)).toString(),
+      availableQuantity: (
+        Number(row.quantity) - Number(row.reservedQuantity)
+      ).toString(),
     }));
     const totalQuantity = stockByWarehouse
       .reduce((sum, row) => sum + Number(row.quantity), 0)
@@ -52,7 +65,12 @@ export const inventoryService = {
       .reduce((sum, row) => sum + Number(row.availableQuantity), 0)
       .toString();
 
-    return { ...product, stockByWarehouse: withAvailability, totalQuantity, totalAvailable };
+    return {
+      ...product,
+      stockByWarehouse: withAvailability,
+      totalQuantity,
+      totalAvailable,
+    };
   },
 
   // addProduct
@@ -68,8 +86,16 @@ export const inventoryService = {
   },
 
   // updateProduct
-  updateProduct: async (id: number, iasCompanyId: number, input: UpdateProductInput) => {
-    const updated = await inventoryRepository.updateProduct(id, iasCompanyId, input);
+  updateProduct: async (
+    id: number,
+    iasCompanyId: number,
+    input: UpdateProductInput,
+  ) => {
+    const updated = await inventoryRepository.updateProduct(
+      id,
+      iasCompanyId,
+      input,
+    );
     if (!updated) throw new NotFoundError("Product not found");
     return updated;
   },
@@ -89,15 +115,28 @@ export const inventoryService = {
 
   // Product + stock level per warehouse, browsable and filterable —
   // GET /inventory/stock.
-  listStockLevels: (iasCompanyId: number, filters: { productId?: number; warehouseId?: number }) =>
-    inventoryRepository.listStockLevels(iasCompanyId, filters),
+  listStockLevels: (
+    iasCompanyId: number,
+    filters: { productId?: number; warehouseId?: number },
+  ) => inventoryRepository.listStockLevels(iasCompanyId, filters),
 
   getStockValuation: (iasCompanyId: number) =>
     inventoryRepository.getStockValuation(iasCompanyId),
 
-  listMovements: async (productId: number, iasCompanyId: number, warehouseId?: number) => {
+  listMovements: async (
+    productId: number,
+    iasCompanyId: number,
+    warehouseId?: number,
+  ) => {
     await inventoryService.getProductOrThrow(productId, iasCompanyId);
     return inventoryRepository.listMovements(productId, warehouseId);
+  },
+
+  listAllMovements: async (iasCompanyId: number, warehouseId?: number) => {
+    if (warehouseId) {
+      await inventoryService.getWarehouseOrThrow(warehouseId, iasCompanyId);
+    }
+    return inventoryRepository.listAllMovements(iasCompanyId, warehouseId);
   },
 
   // adjustStockLevel(productId, quantity, reason)
@@ -106,15 +145,22 @@ export const inventoryService = {
     input: AdjustStockInput,
     createdBy: number,
   ) => {
-    await inventoryService.getProductOrThrow(input.productId, iasCompanyId);
-    await inventoryService.getWarehouseOrThrow(input.warehouseId, iasCompanyId);
+    const product = await inventoryService.getProductOrThrow(
+      input.productId,
+      iasCompanyId,
+    );
+    const warehouse = await inventoryService.getWarehouseOrThrow(
+      input.warehouseId,
+      iasCompanyId,
+    );
 
     if (input.quantityDelta < 0) {
       const current = await inventoryRepository.getStockLevel(
         input.productId,
         input.warehouseId,
       );
-      const available = Number(current.quantity) - Number(current.reservedQuantity);
+      const available =
+        Number(current.quantity) - Number(current.reservedQuantity);
       if (available + input.quantityDelta < 0) {
         throw new ConflictError(
           `Adjustment would take available stock negative (available: ${available}, on hand: ${current.quantity}, reserved: ${current.reservedQuantity})`,
@@ -122,7 +168,14 @@ export const inventoryService = {
       }
     }
 
-    return inventoryRepository.adjustStock({ ...input, iasCompanyId, createdBy });
+    return inventoryRepository.adjustStock({
+      ...input,
+      productSku: product.sku,
+      productName: product.name,
+      warehouseName: warehouse.name,
+      iasCompanyId,
+      createdBy,
+    });
   },
 
   // transferStock(fromWarehouse, toWarehouse, items) — single item per
@@ -134,11 +187,32 @@ export const inventoryService = {
     input: TransferStockInput,
     createdBy: number,
   ) => {
-    await inventoryService.getProductOrThrow(input.productId, iasCompanyId);
-    await inventoryService.getWarehouseOrThrow(input.fromWarehouseId, iasCompanyId);
-    await inventoryService.getWarehouseOrThrow(input.toWarehouseId, iasCompanyId);
-    return inventoryRepository.transferStock({ ...input, iasCompanyId, createdBy });
+    const product = await inventoryService.getProductOrThrow(
+      input.productId,
+      iasCompanyId,
+    );
+    const fromWarehouse = await inventoryService.getWarehouseOrThrow(
+      input.fromWarehouseId,
+      iasCompanyId,
+    );
+    const toWarehouse = await inventoryService.getWarehouseOrThrow(
+      input.toWarehouseId,
+      iasCompanyId,
+    );
+
+    return inventoryRepository.transferStock({
+      ...input,
+      productSku: product.sku,
+      productName: product.name,
+      fromWarehouseName: fromWarehouse.name,
+      toWarehouseName: toWarehouse.name,
+      iasCompanyId,
+      createdBy,
+    });
   },
+
+  listStockTransfers: (iasCompanyId: number) =>
+    inventoryRepository.listStockTransfers(iasCompanyId),
 
   // recordStockCount
   recordStockCount: async (
@@ -146,16 +220,32 @@ export const inventoryService = {
     input: RecordStockCountInput,
     createdBy: number,
   ) => {
-    await inventoryService.getProductOrThrow(input.productId, iasCompanyId);
-    await inventoryService.getWarehouseOrThrow(input.warehouseId, iasCompanyId);
-    return inventoryRepository.recordStockCount({ ...input, iasCompanyId, createdBy });
+    const product = await inventoryService.getProductOrThrow(
+      input.productId,
+      iasCompanyId,
+    );
+    const warehouse = await inventoryService.getWarehouseOrThrow(
+      input.warehouseId,
+      iasCompanyId,
+    );
+    return inventoryRepository.recordStockCount({
+      ...input,
+      productSku: product.sku,
+      productName: product.name,
+      warehouseName: warehouse.name,
+      iasCompanyId,
+      createdBy,
+    });
   },
 
   // Shared guards used by every stock-mutation method above so a bad
   // productId/warehouseId fails with a clean 404 instead of an FK
   // violation surfacing from erp_stock_movements.
   getProductOrThrow: async (productId: number, iasCompanyId: number) => {
-    const product = await inventoryRepository.findProductById(productId, iasCompanyId);
+    const product = await inventoryRepository.findProductById(
+      productId,
+      iasCompanyId,
+    );
     if (!product) throw new NotFoundError("Product not found");
     return product;
   },

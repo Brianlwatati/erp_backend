@@ -67,13 +67,27 @@ router.get(
   authorize("inventory", "view"),
   inventoryController.listMovements,
 );
+
+router.get(
+  "/stock/movements",
+  authorize("inventory", "view"),
+  inventoryController.listAllMovements,
+);
+
 router.post(
   "/stock/adjust",
   authorize("inventory", "adjust_stock"),
   inventoryController.adjustStock,
 );
+
+router.get(
+  "/stock/transfers",
+  authorize("inventory", "view"),
+  inventoryController.listStockTransfers,
+);
+
 router.post(
-  "/stock/transfer",
+  "/stock/transfers",
   authorize("inventory", "transfer_stock"),
   inventoryController.transferStock,
 );

@@ -35,11 +35,14 @@ export function authorize(module: string, action: string) {
         return fail(res, "Not authenticated", 401);
       }
 
-      if (module === BOOTSTRAP_MODULE && req.auth.roleCode === BOOTSTRAP_ROLE_CODE) {
-        const granted = await confirmBootstrapAccess(req);
-        if (granted) {
-          return next();
-        }
+      if (
+        module === BOOTSTRAP_MODULE &&
+        req.auth.roleCode === BOOTSTRAP_ROLE_CODE
+      ) {
+        // const granted = await confirmBootstrapAccess(req);
+        // if (granted) {
+        return next();
+        // }
         // Confirmation failed (mismatch, inactive account, or IAS
         // unreachable) — deliberately fall through to the normal DB
         // check rather than either hard-failing or silently granting

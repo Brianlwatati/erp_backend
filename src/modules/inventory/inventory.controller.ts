@@ -1,5 +1,9 @@
 import type { Request, Response } from "express";
-import { inventoryService, NotFoundError, ConflictError } from "./inventory.service.js";
+import {
+  inventoryService,
+  NotFoundError,
+  ConflictError,
+} from "./inventory.service.js";
 import {
   createWarehouseSchema,
   createProductSchema,
@@ -49,7 +53,8 @@ export const inventoryController = {
 
   createWarehouse: asyncHandler(async (req: Request, res: Response) => {
     const parsed = createWarehouseSchema.safeParse(req.body);
-    if (!parsed.success) return fail(res, "Invalid input", 422, parsed.error.flatten());
+    if (!parsed.success)
+      return fail(res, "Invalid input", 422, parsed.error.flatten());
     await handleServiceCall(
       res,
       () => inventoryService.createWarehouse(companyId(req), parsed.data),
@@ -61,7 +66,10 @@ export const inventoryController = {
   // ---- Products ----
   listProducts: asyncHandler(async (req: Request, res: Response) => {
     const status = req.query.status as "ACTIVE" | "ARCHIVED" | undefined;
-    const products = await inventoryService.listProducts(companyId(req), status);
+    const products = await inventoryService.listProducts(
+      companyId(req),
+      status,
+    );
     ok(res, products);
   }),
 
@@ -73,7 +81,8 @@ export const inventoryController = {
 
   createProduct: asyncHandler(async (req: Request, res: Response) => {
     const parsed = createProductSchema.safeParse(req.body);
-    if (!parsed.success) return fail(res, "Invalid input", 422, parsed.error.flatten());
+    if (!parsed.success)
+      return fail(res, "Invalid input", 422, parsed.error.flatten());
     await handleServiceCall(
       res,
       () => inventoryService.createProduct(companyId(req), parsed.data),
@@ -84,10 +93,16 @@ export const inventoryController = {
 
   updateProduct: asyncHandler(async (req: Request, res: Response) => {
     const parsed = updateProductSchema.safeParse(req.body);
-    if (!parsed.success) return fail(res, "Invalid input", 422, parsed.error.flatten());
+    if (!parsed.success)
+      return fail(res, "Invalid input", 422, parsed.error.flatten());
     await handleServiceCall(
       res,
-      () => inventoryService.updateProduct(Number(req.params.id), companyId(req), parsed.data),
+      () =>
+        inventoryService.updateProduct(
+          Number(req.params.id),
+          companyId(req),
+          parsed.data,
+        ),
       "Product updated",
     );
   }),
@@ -95,7 +110,8 @@ export const inventoryController = {
   archiveProduct: asyncHandler(async (req: Request, res: Response) => {
     await handleServiceCall(
       res,
-      () => inventoryService.archiveProduct(Number(req.params.id), companyId(req)),
+      () =>
+        inventoryService.archiveProduct(Number(req.params.id), companyId(req)),
       "Product archived",
     );
   }),
@@ -103,8 +119,12 @@ export const inventoryController = {
   // ---- Stock ----
   getLowStockItems: asyncHandler(async (req: Request, res: Response) => {
     const parsed = lowStockQuerySchema.safeParse(req.query);
-    if (!parsed.success) return fail(res, "Invalid query", 422, parsed.error.flatten());
-    const items = await inventoryService.getLowStockItems(companyId(req), parsed.data.warehouseId);
+    if (!parsed.success)
+      return fail(res, "Invalid query", 422, parsed.error.flatten());
+    const items = await inventoryService.getLowStockItems(
+      companyId(req),
+      parsed.data.warehouseId,
+    );
     ok(res, items);
   }),
 
@@ -114,8 +134,12 @@ export const inventoryController = {
   // it (e.g. warehouseId alone = "everything in this warehouse").
   listStockLevels: asyncHandler(async (req: Request, res: Response) => {
     const parsed = stockLevelsQuerySchema.safeParse(req.query);
-    if (!parsed.success) return fail(res, "Invalid query", 422, parsed.error.flatten());
-    const levels = await inventoryService.listStockLevels(companyId(req), parsed.data);
+    if (!parsed.success)
+      return fail(res, "Invalid query", 422, parsed.error.flatten());
+    const levels = await inventoryService.listStockLevels(
+      companyId(req),
+      parsed.data,
+    );
     ok(res, levels);
   }),
 
@@ -125,29 +149,57 @@ export const inventoryController = {
   }),
 
   listMovements: asyncHandler(async (req: Request, res: Response) => {
-    const warehouseId = req.query.warehouseId ? Number(req.query.warehouseId) : undefined;
+    const warehouseId = req.query.warehouseId
+      ? Number(req.query.warehouseId)
+      : undefined;
     await handleServiceCall(res, () =>
-      inventoryService.listMovements(Number(req.params.id), companyId(req), warehouseId),
+      inventoryService.listMovements(
+        Number(req.params.id),
+        companyId(req),
+        warehouseId,
+      ),
+    );
+  }),
+
+  listAllMovements: asyncHandler(async (req: Request, res: Response) => {
+    const warehouseId = req.query.warehouseId
+      ? Number(req.query.warehouseId)
+      : undefined;
+    await handleServiceCall(res, () =>
+      inventoryService.listAllMovements(companyId(req), warehouseId),
     );
   }),
 
   adjustStock: asyncHandler(async (req: Request, res: Response) => {
     const parsed = adjustStockSchema.safeParse(req.body);
-    if (!parsed.success) return fail(res, "Invalid input", 422, parsed.error.flatten());
+    if (!parsed.success)
+      return fail(res, "Invalid input", 422, parsed.error.flatten());
     await handleServiceCall(
       res,
-      () => inventoryService.adjustStock(companyId(req), parsed.data, userId(req)),
+      () =>
+        inventoryService.adjustStock(companyId(req), parsed.data, userId(req)),
       "Stock adjusted",
       201,
     );
   }),
 
+  listStockTransfers: asyncHandler(async (req: Request, res: Response) => {
+    const transfers = await inventoryService.listStockTransfers(companyId(req));
+    ok(res, transfers);
+  }),
+
   transferStock: asyncHandler(async (req: Request, res: Response) => {
     const parsed = transferStockSchema.safeParse(req.body);
-    if (!parsed.success) return fail(res, "Invalid input", 422, parsed.error.flatten());
+    if (!parsed.success)
+      return fail(res, "Invalid input", 422, parsed.error.flatten());
     await handleServiceCall(
       res,
-      () => inventoryService.transferStock(companyId(req), parsed.data, userId(req)),
+      () =>
+        inventoryService.transferStock(
+          companyId(req),
+          parsed.data,
+          userId(req),
+        ),
       "Stock transferred",
       201,
     );
@@ -155,10 +207,16 @@ export const inventoryController = {
 
   recordStockCount: asyncHandler(async (req: Request, res: Response) => {
     const parsed = recordStockCountSchema.safeParse(req.body);
-    if (!parsed.success) return fail(res, "Invalid input", 422, parsed.error.flatten());
+    if (!parsed.success)
+      return fail(res, "Invalid input", 422, parsed.error.flatten());
     await handleServiceCall(
       res,
-      () => inventoryService.recordStockCount(companyId(req), parsed.data, userId(req)),
+      () =>
+        inventoryService.recordStockCount(
+          companyId(req),
+          parsed.data,
+          userId(req),
+        ),
       "Stock count recorded",
       201,
     );
