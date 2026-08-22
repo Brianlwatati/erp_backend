@@ -563,12 +563,22 @@ export const inventoryRepository = {
       `INSERT INTO erp_stock_levels (
          ias_company_id,
          product_id,
-         warehouse_id
+         product_sku,
+         product_name,
+         warehouse_id,
+         warehouse_name
        )
-       VALUES ($1, $2, $3)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (product_id, warehouse_id)
        DO NOTHING`,
-      [input.iasCompanyId, input.productId, input.warehouseId],
+      [
+        input.iasCompanyId,
+        input.productId,
+        input.productSku,
+        input.productName,
+        input.warehouseId,
+        input.warehouseName,
+      ],
     );
 
     // Lock the current stock level so concurrent stock mutations
@@ -752,12 +762,22 @@ export const inventoryRepository = {
         `INSERT INTO erp_stock_levels (
            ias_company_id,
            product_id,
-           warehouse_id
+           product_sku,
+           product_name,
+           warehouse_id,
+           warehouse_name
          )
-         VALUES ($1, $2, $3)
+         VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (product_id, warehouse_id)
          DO NOTHING`,
-        [input.iasCompanyId, input.productId, input.fromWarehouseId],
+        [
+          input.iasCompanyId,
+          input.productId,
+          input.productSku,
+          input.productName,
+          input.fromWarehouseId,
+          input.fromWarehouseName,
+        ],
       );
 
       // Lock source stock level.
@@ -836,7 +856,7 @@ export const inventoryRepository = {
              quantity,
              created_by
            )
-           VALUES ($1, $2, $3, $4, $5, $6)
+           VALUES ($1, $2, $3, $4, $5, $6 , $7, $8, $9, $10)
            RETURNING
              id,
              ias_company_id AS "iasCompanyId",
@@ -914,12 +934,22 @@ export const inventoryRepository = {
         `INSERT INTO erp_stock_levels (
            ias_company_id,
            product_id,
-           warehouse_id
+           product_sku,
+           product_name,
+           warehouse_id,
+            warehouse_name
          )
-         VALUES ($1, $2, $3)
+         VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (product_id, warehouse_id)
          DO NOTHING`,
-        [input.iasCompanyId, input.productId, input.warehouseId],
+        [
+          input.iasCompanyId,
+          input.productId,
+          input.productSku,
+          input.productName,
+          input.warehouseId,
+          input.warehouseName,
+        ],
       );
 
       const lockResult = await client.query<RawStockLevel>(
