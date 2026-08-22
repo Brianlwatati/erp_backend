@@ -42,8 +42,26 @@ export const inventoryService = {
   },
 
   // ---- Products ----
-  listProducts: (iasCompanyId: number, status?: "ACTIVE" | "ARCHIVED") => {
-    const products = inventoryRepository.listProducts(iasCompanyId, status);
+  listProducts: async (
+    iasCompanyId: number,
+    status?: "ACTIVE" | "ARCHIVED",
+  ) => {
+    const products = await inventoryRepository.listProducts(
+      iasCompanyId,
+      status,
+    );
+    for (const product of products) {
+      const stockLevels = await inventoryRepository.listStockLevels(
+        iasCompanyId,
+        { productId: product.id },
+      );
+      const totalAvailable = stockLevels.reduce(
+        (sum, row) =>
+          sum + (Number(row.quantity) - Number(row.reservedQuantity)),
+        0,
+      );
+      product.totalAvailable = totalAvailable.toString();
+    }
     return products;
   },
 

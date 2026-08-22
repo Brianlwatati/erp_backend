@@ -20,9 +20,10 @@ export interface Product {
   description: string | null;
   unit: string;
   category: string | null;
-  costPrice: string;   // NUMERIC comes back from pg as string — cast at the edges, not in the DB layer
+  costPrice: string; // NUMERIC comes back from pg as string — cast at the edges, not in the DB layer
   sellPrice: string;
   reorderLevel: string;
+  totalAvailable: string; // computed at the service layer, not stored in the DB
   status: ProductStatus;
   createdAt: string;
   updatedAt: string;
@@ -89,8 +90,8 @@ export interface StockValuationRow {
   sku: string;
   name: string;
   totalQuantity: string;
-  averageCost: string;   // weighted average across warehouses, not just cost_price
-  valuation: string;      // totalQuantity * averageCost
+  averageCost: string; // weighted average across warehouses, not just cost_price
+  valuation: string; // totalQuantity * averageCost
 }
 
 // A single product-in-a-warehouse row, joined with just enough product and

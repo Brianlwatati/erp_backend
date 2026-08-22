@@ -23,26 +23,38 @@ const SELECT_WAREHOUSE = `
   FROM erp_warehouses
 `;
 
+const SELECT_STOCK_LEVEL = `
+SELECT
+  id,
+  ias_company_id AS "iasCompanyId",
+  product_id AS "productId",
+  product_sku AS "productSku",
+  product_name AS "productName",
+  warehouse_id AS "warehouseId",
+  warehouse_name AS "warehouseName",
+  quantity,
+  reserved_quantity AS "reservedQuantity",
+  average_cost AS "averageCost",
+  updated_at AS "updatedAt"
+FROM erp_stock_levels
+`;
+
 const SELECT_PRODUCT = `
   SELECT
-    erp_products.id AS "id",
-    erp_products.ias_company_id AS "iasCompanyId",
-    erp_products.sku AS "sku",
-    erp_products.name AS "name",
-    erp_products.description AS "description",
-    erp_products.unit AS "unit",
-    erp_products.category AS "category",
-    erp_products.cost_price AS "costPrice",
-    erp_products.sell_price AS "sellPrice",
-    erp_products.reorder_level AS "reorderLevel",
-    erp_products.status AS "status",
-    erp_products.created_at AS "createdAt",
-    erp_products.updated_at AS "updatedAt",
-    erp_stock_levels.quantity AS "totalAvailable",
-    erp_stock_levels.reserved_quantity AS "reservedQuantity"
+    id,
+    ias_company_id AS "iasCompanyId",
+    sku,
+    name,
+    description,
+    unit,
+    category,
+    cost_price AS "costPrice",
+    sell_price AS "sellPrice",
+    reorder_level AS "reorderLevel",
+    status,
+    created_at AS "createdAt",
+    updated_at AS "updatedAt"
   FROM erp_products
-  LEFT JOIN erp_stock_levels
-    ON erp_products.id = erp_stock_levels.product_id
 `;
 
 interface RawStockLevel {
@@ -107,17 +119,17 @@ export const inventoryRepository = {
   listProducts: (iasCompanyId: number, status?: "ACTIVE" | "ARCHIVED") =>
     query<Product>(
       `${SELECT_PRODUCT}
-       WHERE erp_products.ias_company_id = $1
-         AND ($2::varchar IS NULL OR erp_products.status = $2)
-       ORDER BY erp_products.name`,
+       WHERE ias_company_id = $1
+         AND ($2::varchar IS NULL OR status = $2)
+       ORDER BY name`,
       [iasCompanyId, status ?? null],
     ),
 
   findProductById: (id: number, iasCompanyId: number) =>
     queryOne<Product>(
       `${SELECT_PRODUCT}
-       WHERE erp_products.id = $1
-         AND erp_products.ias_company_id = $2`,
+       WHERE id = $1
+         AND ias_company_id = $2`,
       [id, iasCompanyId],
     ),
 
@@ -239,11 +251,7 @@ export const inventoryRepository = {
 
   getStockLevel: async (productId: number, warehouseId: number) => {
     const row = await queryOne<RawStockLevel>(
-      `SELECT
-         quantity,
-         reserved_quantity AS "reservedQuantity",
-         average_cost AS "averageCost"
-       FROM erp_stock_levels
+      `${SELECT_STOCK_LEVEL}
        WHERE product_id = $1
          AND warehouse_id = $2`,
       [productId, warehouseId],
@@ -264,11 +272,7 @@ export const inventoryRepository = {
       quantity: string;
       reservedQuantity: string;
     }>(
-      `SELECT
-         warehouse_id AS "warehouseId",
-         quantity,
-         reserved_quantity AS "reservedQuantity"
-       FROM erp_stock_levels
+      `${SELECT_STOCK_LEVEL}
        WHERE product_id = $1`,
       [productId],
     ),
@@ -288,34 +292,31 @@ export const inventoryRepository = {
   ) =>
     query<StockLevelWithDetails>(
       `SELECT
-         p.id AS "productId",
-         p.sku,
-         p.name AS "productName",
+         sl."productId",
+         sl."productSku" AS "sku",
+         sl."productName",
 
-         w.id AS "warehouseId",
+         sl."warehouseId",
          w.code AS "warehouseCode",
-         w.name AS "warehouseName",
+         sl."warehouseName",
 
          sl.quantity,
-         sl.reserved_quantity AS "reservedQuantity",
-         (sl.quantity - sl.reserved_quantity) AS "availableQuantity",
-         sl.average_cost AS "averageCost",
-         sl.updated_at AS "updatedAt"
+         sl."reservedQuantity",
+         (sl.quantity - sl."reservedQuantity") AS "availableQuantity",
+         sl."averageCost",
+         sl."updatedAt"
 
-       FROM erp_stock_levels sl
-
-       JOIN erp_products p
-         ON p.id = sl.product_id
-        AND p.ias_company_id = $1
+       FROM (${SELECT_STOCK_LEVEL}) sl
 
        JOIN erp_warehouses w
-         ON w.id = sl.warehouse_id
+         ON w.id = sl."warehouseId"
         AND w.ias_company_id = $1
 
-       WHERE ($2::bigint IS NULL OR p.id = $2)
-         AND ($3::bigint IS NULL OR w.id = $3)
+       WHERE sl."iasCompanyId" = $1
+         AND ($2::bigint IS NULL OR sl."productId" = $2)
+         AND ($3::bigint IS NULL OR sl."warehouseId" = $3)
 
-       ORDER BY p.name, w.name`,
+       ORDER BY sl."productName", sl."warehouseName"`,
       [iasCompanyId, filters.productId ?? null, filters.warehouseId ?? null],
     ),
 
@@ -584,14 +585,10 @@ export const inventoryRepository = {
     // Lock the current stock level so concurrent stock mutations
     // cannot calculate from the same stale quantity.
     const lockResult = await client.query<RawStockLevel>(
-      `SELECT
-           quantity,
-           reserved_quantity AS "reservedQuantity",
-           average_cost AS "averageCost"
-         FROM erp_stock_levels
-         WHERE product_id = $1
-           AND warehouse_id = $2
-         FOR UPDATE`,
+      `${SELECT_STOCK_LEVEL}
+       WHERE product_id = $1
+         AND warehouse_id = $2
+       FOR UPDATE`,
       [input.productId, input.warehouseId],
     );
 
@@ -782,14 +779,10 @@ export const inventoryRepository = {
 
       // Lock source stock level.
       const lockResult = await client.query<RawStockLevel>(
-        `SELECT
-             quantity,
-             reserved_quantity AS "reservedQuantity",
-             average_cost AS "averageCost"
-           FROM erp_stock_levels
-           WHERE product_id = $1
-             AND warehouse_id = $2
-           FOR UPDATE`,
+        `${SELECT_STOCK_LEVEL}
+         WHERE product_id = $1
+           AND warehouse_id = $2
+         FOR UPDATE`,
         [input.productId, input.fromWarehouseId],
       );
 
@@ -953,11 +946,10 @@ export const inventoryRepository = {
       );
 
       const lockResult = await client.query<RawStockLevel>(
-        `SELECT quantity
-           FROM erp_stock_levels
-           WHERE product_id = $1
-             AND warehouse_id = $2
-           FOR UPDATE`,
+        `${SELECT_STOCK_LEVEL}
+         WHERE product_id = $1
+           AND warehouse_id = $2
+         FOR UPDATE`,
         [input.productId, input.warehouseId],
       );
       const systemQuantity = Number(lockResult.rows[0]!.quantity);
@@ -1019,13 +1011,10 @@ export const inventoryRepository = {
   }) =>
     withTransaction(async (client) => {
       const lockResult = await client.query<RawStockLevel>(
-        `SELECT
-             quantity,
-             reserved_quantity AS "reservedQuantity"
-           FROM erp_stock_levels
-           WHERE product_id = $1
-             AND warehouse_id = $2
-           FOR UPDATE`,
+        `${SELECT_STOCK_LEVEL}
+         WHERE product_id = $1
+           AND warehouse_id = $2
+         FOR UPDATE`,
         [input.productId, input.warehouseId],
       );
 
