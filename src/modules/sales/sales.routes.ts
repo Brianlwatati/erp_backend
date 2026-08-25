@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { authenticate } from "../../middleware/authenticate.js";
+import { authorize } from "../../middleware/authorize.js";
+import { salesController as c } from "./sales.controller.js";
+const r = Router();
+r.use(authenticate);
+r.get("/orders", authorize("sales", "view"), c.list);
+r.get("/orders/:id", authorize("sales", "view"), c.get);
+r.post("/orders", authorize("sales", "manage_orders"), c.create);
+r.post("/orders/:id/confirm", authorize("sales", "approve_order"), c.confirm);
+r.post("/orders/:id/ship", authorize("sales", "ship_order"), c.ship);
+export default r;

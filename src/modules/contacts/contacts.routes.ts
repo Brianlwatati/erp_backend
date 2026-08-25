@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { authenticate } from "../../middleware/authenticate.js";
+import { authorize } from "../../middleware/authorize.js";
+import { contactsController as c } from "./contacts.controller.js";
+const r = Router();
+r.use(authenticate);
+r.get("/", authorize("crm", "view"), c.list);
+r.post("/", authorize("crm", "manage_contacts"), c.create);
+r.patch("/:id", authorize("crm", "manage_contacts"), c.update);
+r.get("/:id/history", authorize("crm", "view"), c.history);
+r.post("/:id/interactions", authorize("crm", "log_interaction"), c.interaction);
+export default r;
