@@ -7,28 +7,28 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get("/", authorize("access", "view"), rolesController.list);
-router.get("/:id", authorize("access", "view"), rolesController.get);
-router.post("/", authorize("access", "manage_roles"), rolesController.create);
+router.get("/", authorize("roles", "view"), rolesController.list);
+router.get("/:id", authorize("roles", "view"), rolesController.get);
+router.post("/", authorize("roles", "manage_roles"), rolesController.create);
 router.patch(
   "/:id",
-  authorize("access", "manage_roles"),
+  authorize("roles", "manage_roles"),
   rolesController.update,
 );
 router.delete(
   "/:id",
-  authorize("access", "manage_roles"),
+  authorize("roles", "manage_roles"),
   rolesController.remove,
 );
 
 router.get(
   "/:id/permissions",
-  authorize("access", "view"),
+  authorize("roles", "view"),
   rolesController.getPermissionMatrix,
 );
 router.put(
   "/:id/permissions",
-  authorize("access", "manage_roles"),
+  authorize("roles", "manage_roles"),
   rolesController.setPermissions,
 );
 
