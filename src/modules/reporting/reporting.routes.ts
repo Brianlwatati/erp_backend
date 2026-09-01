@@ -1,1 +1,10 @@
-import {Router} from "express";import {authenticate} from "../../middleware/authenticate.js";import {authorize} from "../../middleware/authorize.js";import {reportingController as c} from "./reporting.controller.js";const r=Router();r.use(authenticate);r.get("/dashboard",authorize("reporting","view"),c.dashboard);r.get("/sales",authorize("reporting","view"),c.sales);r.get("/low-stock",authorize("reporting","view"),c.lowStock);export default r;
+import { Router } from "express";
+import { authenticate } from "../../middleware/authenticate.js";
+import { authorize } from "../../middleware/authorize.js";
+import { reportingController as c } from "./reporting.controller.js";
+const r = Router();
+r.use(authenticate);
+r.get("/dashboard", authorize("reporting", "view"), c.dashboard);
+r.get("/sales", authorize("reporting", "view"), c.sales);
+r.get("/low-stock", authorize("reporting", "view"), c.lowStock);
+export default r;

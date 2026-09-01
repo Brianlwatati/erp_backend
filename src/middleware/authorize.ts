@@ -21,6 +21,10 @@ const BOOTSTRAP_MODULES = [
   { module: "branches", roleCode: "INVT_ADMIN" },
   { module: "sales", roleCode: "INVT_ADMIN" },
   { module: "contacts", roleCode: "INVT_ADMIN" },
+  { module: "purchasing", roleCode: "INVT_ADMIN" },
+  { module: "finance", roleCode: "INVT_ADMIN" },
+  { module: "hr", roleCode: "INVT_ADMIN" },
+  { module: "reporting", roleCode: "INVT_ADMIN" },
 ] as const;
 
 type BootstrapModule = (typeof BOOTSTRAP_MODULES)[number];
