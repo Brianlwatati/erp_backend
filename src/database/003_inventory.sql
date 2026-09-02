@@ -22,7 +22,11 @@ CREATE TABLE IF NOT EXISTS erp_warehouses (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  UNIQUE (ias_company_id, code)
+  -- Tenant-scoped uniqueness
+  UNIQUE (ias_company_id, code),
+
+  -- Required as a target for tenant-aware composite FKs
+  UNIQUE (ias_company_id, id)
 );
 
 
@@ -57,7 +61,11 @@ CREATE TABLE IF NOT EXISTS erp_products (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
+  -- Tenant-scoped uniqueness
   UNIQUE (ias_company_id, sku),
+
+  -- Required as a target for tenant-aware composite FKs
+  UNIQUE (ias_company_id, id),
 
   CHECK (cost_price >= 0),
   CHECK (sell_price >= 0),
@@ -95,10 +103,10 @@ CREATE TABLE IF NOT EXISTS erp_stock_levels (
   -- Weighted average cost
   average_cost NUMERIC(15,2) NOT NULL DEFAULT 0,
 
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  -- Prevent duplicate stock record for the same product/warehouse
-  UNIQUE (product_id, warehouse_id),
+  -- One stock record per company/product/warehouse
+  UNIQUE (ias_company_id, product_id, warehouse_id),
 
   -- Make (company, id) available for tenant-aware foreign keys
   CONSTRAINT uq_stock_levels_company_id
@@ -114,8 +122,14 @@ CREATE TABLE IF NOT EXISTS erp_stock_levels (
   CONSTRAINT fk_stock_levels_warehouse
     FOREIGN KEY (ias_company_id, warehouse_id)
     REFERENCES erp_warehouses (ias_company_id, id)
-    ON DELETE CASCADE
+    ON DELETE CASCADE,
+
+  CHECK (quantity >= 0),
+  CHECK (reserved_quantity >= 0),
+  CHECK (reserved_quantity <= quantity),
+  CHECK (average_cost >= 0)
 );
+
 
 CREATE INDEX IF NOT EXISTS idx_stock_levels_company
   ON erp_stock_levels (ias_company_id);
@@ -126,6 +140,7 @@ CREATE INDEX IF NOT EXISTS idx_stock_levels_product
 CREATE INDEX IF NOT EXISTS idx_stock_levels_warehouse
   ON erp_stock_levels (ias_company_id, warehouse_id);
 
+
 -- ------------------------------------------------------------
 -- Stock movements
 -- ------------------------------------------------------------
@@ -135,16 +150,12 @@ CREATE TABLE IF NOT EXISTS erp_stock_movements (
 
   ias_company_id BIGINT NOT NULL,
 
-  product_id BIGINT NOT NULL
-    REFERENCES erp_products(id)
-    ON DELETE CASCADE,
+  product_id BIGINT NOT NULL,
 
   product_sku VARCHAR(100) NOT NULL,
   product_name VARCHAR(255) NOT NULL,
 
-  warehouse_id BIGINT NOT NULL
-    REFERENCES erp_warehouses(id)
-    ON DELETE CASCADE,
+  warehouse_id BIGINT NOT NULL,
 
   warehouse_name VARCHAR(255) NOT NULL,
 
@@ -160,7 +171,21 @@ CREATE TABLE IF NOT EXISTS erp_stock_movements (
   notes TEXT,
 
   created_by BIGINT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  -- Product must belong to the same company
+  CONSTRAINT fk_stock_movements_product
+    FOREIGN KEY (ias_company_id, product_id)
+    REFERENCES erp_products (ias_company_id, id)
+    ON DELETE CASCADE,
+
+  -- Warehouse must belong to the same company
+  CONSTRAINT fk_stock_movements_warehouse
+    FOREIGN KEY (ias_company_id, warehouse_id)
+    REFERENCES erp_warehouses (ias_company_id, id)
+    ON DELETE CASCADE,
+
+  CHECK (unit_cost IS NULL OR unit_cost >= 0)
 );
 
 
@@ -169,6 +194,12 @@ CREATE INDEX IF NOT EXISTS idx_stock_movements_company
 
 CREATE INDEX IF NOT EXISTS idx_stock_movements_product
   ON erp_stock_movements(ias_company_id, product_id);
+
+CREATE INDEX IF NOT EXISTS idx_stock_movements_warehouse
+  ON erp_stock_movements(ias_company_id, warehouse_id);
+
+CREATE INDEX IF NOT EXISTS idx_stock_movements_created_at
+  ON erp_stock_movements(ias_company_id, created_at);
 
 
 -- ------------------------------------------------------------
@@ -180,21 +211,15 @@ CREATE TABLE IF NOT EXISTS erp_stock_transfers (
 
   ias_company_id BIGINT NOT NULL,
 
-  product_id BIGINT NOT NULL
-    REFERENCES erp_products(id)
-    ON DELETE CASCADE,
+  product_id BIGINT NOT NULL,
 
   product_sku VARCHAR(100) NOT NULL,
   product_name VARCHAR(255) NOT NULL,
 
-  from_warehouse_id BIGINT NOT NULL
-    REFERENCES erp_warehouses(id),
-
+  from_warehouse_id BIGINT NOT NULL,
   from_warehouse_name VARCHAR(255) NOT NULL,
 
-  to_warehouse_id BIGINT NOT NULL
-    REFERENCES erp_warehouses(id),
-
+  to_warehouse_id BIGINT NOT NULL,
   to_warehouse_name VARCHAR(255) NOT NULL,
 
   quantity NUMERIC(15,3) NOT NULL,
@@ -204,9 +229,40 @@ CREATE TABLE IF NOT EXISTS erp_stock_transfers (
   created_by BIGINT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
+  -- Product must belong to the same company
+  CONSTRAINT fk_stock_transfers_product
+    FOREIGN KEY (ias_company_id, product_id)
+    REFERENCES erp_products (ias_company_id, id)
+    ON DELETE CASCADE,
+
+  -- Source warehouse must belong to the same company
+  CONSTRAINT fk_stock_transfers_from_warehouse
+    FOREIGN KEY (ias_company_id, from_warehouse_id)
+    REFERENCES erp_warehouses (ias_company_id, id)
+    ON DELETE RESTRICT,
+
+  -- Destination warehouse must belong to the same company
+  CONSTRAINT fk_stock_transfers_to_warehouse
+    FOREIGN KEY (ias_company_id, to_warehouse_id)
+    REFERENCES erp_warehouses (ias_company_id, id)
+    ON DELETE RESTRICT,
+
   CHECK (quantity > 0),
   CHECK (from_warehouse_id <> to_warehouse_id)
 );
+
+
+CREATE INDEX IF NOT EXISTS idx_stock_transfers_company
+  ON erp_stock_transfers(ias_company_id);
+
+CREATE INDEX IF NOT EXISTS idx_stock_transfers_product
+  ON erp_stock_transfers(ias_company_id, product_id);
+
+CREATE INDEX IF NOT EXISTS idx_stock_transfers_from_warehouse
+  ON erp_stock_transfers(ias_company_id, from_warehouse_id);
+
+CREATE INDEX IF NOT EXISTS idx_stock_transfers_to_warehouse
+  ON erp_stock_transfers(ias_company_id, to_warehouse_id);
 
 
 -- ------------------------------------------------------------
