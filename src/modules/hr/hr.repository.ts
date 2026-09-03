@@ -1,4 +1,5 @@
 import { query, queryOne, withTransaction } from "../../config/db.js";
+import { Employee } from "./hr.types.js";
 
 function toTimestamp(date: string, time?: string | null) {
   if (!time) return null;
@@ -7,6 +8,30 @@ function toTimestamp(date: string, time?: string | null) {
 }
 
 export const hrRepository = {
+  departments: (c: number) =>
+    query(
+      `SELECT * FROM erp_departments WHERE ias_company_id=$1 ORDER BY name`,
+      [c],
+    ),
+
+  createDepartment: (c: number, x: any) =>
+    queryOne(
+      `INSERT INTO erp_departments(ias_company_id,name,code,description) VALUES($1,$2,$3,$4) RETURNING *`,
+      [c, x.name, x.code, x.description ?? null],
+    ),
+
+  jobTitles: (c: number) =>
+    query(
+      `SELECT * FROM erp_job_titles WHERE ias_company_id=$1 ORDER BY name`,
+      [c],
+    ),
+
+  createJobTitle: (c: number, x: any) =>
+    queryOne(
+      `INSERT INTO erp_job_titles(ias_company_id,name,code,description) VALUES($1,$2,$3,$4) RETURNING *`,
+      [c, x.name, x.code, x.description ?? null],
+    ),
+
   employees: (c: number) =>
     query(
       `SELECT * FROM erp_employees WHERE ias_company_id=$1 ORDER BY last_name,first_name`,
@@ -17,9 +42,13 @@ export const hrRepository = {
       id,
       c,
     ]),
-  createEmployee: (c: number, x: any) =>
+  createEmployee: (c: number, x: Employee) =>
     queryOne(
-      `INSERT INTO erp_employees(ias_company_id,employee_number,first_name,last_name,email,phone,department,job_title,hire_date,salary) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      `INSERT INTO erp_employees
+      (ias_company_id,employee_number, first_name,last_name,email,phone,
+      department_id,department_name,job_title_id,job_title_name,hire_date,salary)
+       VALUES($1,$2,$3,$4,$5,$6,$7,(SELECT name FROM erp_departments WHERE id=$7 AND ias_company_id=$1),$8,(SELECT name FROM erp_job_titles WHERE id=$8 AND ias_company_id=$1),$9,$10)
+       RETURNING *`,
       [
         c,
         x.employeeNumber,
@@ -27,8 +56,8 @@ export const hrRepository = {
         x.lastName,
         x.email ?? null,
         x.phone ?? null,
-        x.department ?? null,
-        x.jobTitle ?? null,
+        x.departmentId ?? null,
+        x.jobTitleId ?? null,
         x.hireDate ?? null,
         x.salary ?? 0,
       ],

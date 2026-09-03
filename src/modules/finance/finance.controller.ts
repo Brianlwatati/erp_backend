@@ -19,6 +19,22 @@ const payment = z.object({
     )
     .min(1),
 });
+const supplierPayment = z.object({
+  supplierId: z.number().int().positive().optional(),
+  paymentReference: z.string().optional(),
+  amount: z.number().positive(),
+  paymentDate: z.string().optional(),
+  method: z.string().optional(),
+  notes: z.string().optional(),
+  allocations: z
+    .array(
+      z.object({
+        billId: z.number().int().positive(),
+        amount: z.number().positive(),
+      }),
+    )
+    .min(1),
+});
 const journal = z.object({
   description: z.string().min(1),
   referenceType: z.string().optional(),
@@ -80,6 +96,33 @@ export const financeController = {
   ar: asyncHandler(async (req, res) =>
     ok(res, await r.ar(req.auth!.companyId)),
   ),
+  supplierBills: asyncHandler(async (req, res) =>
+    ok(res, await r.supplierBills(req.auth!.companyId)),
+  ),
+  ap: asyncHandler(async (req, res) =>
+    ok(res, await r.ap(req.auth!.companyId)),
+  ),
+  supplierBillFromOrder: asyncHandler(async (req, res) =>
+    call(
+      res,
+      () =>
+        r.supplierBillFromOrder(
+          Number(req.params.orderId),
+          req.auth!.companyId,
+          req.auth!.userId,
+        ),
+      "Supplier bill created",
+    ),
+  ),
+  supplierPayment: asyncHandler(async (req, res) => {
+    const p = supplierPayment.safeParse(req.body);
+    if (!p.success) return fail(res, "Invalid input", 422, p.error.flatten());
+    await call(
+      res,
+      () => r.supplierPayment(req.auth!.companyId, req.auth!.userId, p.data),
+      "Supplier payment recorded",
+    );
+  }),
   journal: asyncHandler(async (req, res) => {
     const p = journal.safeParse(req.body);
     if (!p.success) return fail(res, "Invalid input", 422, p.error.flatten());

@@ -9,10 +9,15 @@ const emp = z.object({
   lastName: z.string(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
-  department: z.string().optional(),
-  jobTitle: z.string().optional(),
+  departmentId: z.number().int().positive().optional(),
+  jobTitleId: z.number().int().positive().optional(),
   hireDate: z.string().optional(),
   salary: z.number().nonnegative().optional(),
+});
+const referenceData = z.object({
+  name: z.string().min(1).max(150),
+  code: z.string().min(1).max(50),
+  description: z.string().optional(),
 });
 const att = z.object({
   date: z.string().optional(),
@@ -39,6 +44,30 @@ const call = async (res: Response, fn: () => Promise<any>, msg?: string) => {
   }
 };
 export const hrController = {
+  departments: asyncHandler(async (req, res) =>
+    ok(res, await r.departments(req.auth!.companyId)),
+  ),
+  createDepartment: asyncHandler(async (req, res) => {
+    const p = referenceData.safeParse(req.body);
+    if (!p.success) return fail(res, "Invalid input", 422, p.error.flatten());
+    await call(
+      res,
+      () => r.createDepartment(req.auth!.companyId, p.data),
+      "Department created",
+    );
+  }),
+  jobTitles: asyncHandler(async (req, res) =>
+    ok(res, await r.jobTitles(req.auth!.companyId)),
+  ),
+  createJobTitle: asyncHandler(async (req, res) => {
+    const p = referenceData.safeParse(req.body);
+    if (!p.success) return fail(res, "Invalid input", 422, p.error.flatten());
+    await call(
+      res,
+      () => r.createJobTitle(req.auth!.companyId, p.data),
+      "Job title created",
+    );
+  }),
   employees: asyncHandler(async (req, res) =>
     ok(res, await r.employees(req.auth!.companyId)),
   ),

@@ -56,8 +56,9 @@ export const purchasingRepository = {
       ).rows[0];
       for (const i of arr)
         await client.query(
-          `INSERT INTO erp_purchase_order_items(purchase_order_id,product_id,product_sku,product_name,quantity,unit_cost,tax_rate,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
+          `INSERT INTO erp_purchase_order_items(ias_company_id,purchase_order_id,product_id,product_sku,product_name,quantity,unit_cost,tax_rate,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
           [
+            c,
             o.id,
             i.productId,
             i.sku,

@@ -7,6 +7,16 @@ export const permissionsRepository = {
       `SELECT id, module, action, code FROM erp_permissions ORDER BY module, action`,
     ),
 
+  listForUser: (userId: string) =>
+    query<ErpPermission>(
+      `SELECT DISTINCT p.id, p.module, p.action, p.code
+       FROM erp_role_assignments ra
+       JOIN erp_role_permissions rp ON rp.role_id = ra.role_id
+       JOIN erp_permissions p ON p.id = rp.permission_id
+       WHERE ra.ias_user_id = $1`,
+      [userId],
+    ),
+
   findByCode: (code: string) =>
     queryOne<ErpPermission>(
       `SELECT id, module, action, code FROM erp_permissions WHERE code = $1`,
@@ -49,11 +59,11 @@ export const permissionsRepository = {
     ),
 
   setRolePermissions: async (roleId: number, permissionIds: number[]) => {
-    await query(`DELETE FROM erp_role_permissions WHERE role_id = $1`, [roleId]);
+    await query(`DELETE FROM erp_role_permissions WHERE role_id = $1`, [
+      roleId,
+    ]);
     if (permissionIds.length === 0) return;
-    const values = permissionIds
-      .map((_, i) => `($1, $${i + 2})`)
-      .join(", ");
+    const values = permissionIds.map((_, i) => `($1, $${i + 2})`).join(", ");
     await query(
       `INSERT INTO erp_role_permissions (role_id, permission_id) VALUES ${values}`,
       [roleId, ...permissionIds],

@@ -9,4 +9,6 @@ const router = Router();
 // routes (see roles.routes.ts) can assign them.
 router.get("/", authenticate, permissionsController.list);
 
+router.get("/userpermissions", authenticate, permissionsController.listForUser);
+
 export default router;

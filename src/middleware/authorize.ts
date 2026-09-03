@@ -16,15 +16,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
  *   { module: "sales", roleCode: "SALES_ADMIN" },
  */
 const BOOTSTRAP_MODULES = [
-  { module: "inventory", roleCode: "INVT_ADMIN" },
-  { module: "roles", roleCode: "INVT_ADMIN" },
-  { module: "branches", roleCode: "INVT_ADMIN" },
-  { module: "sales", roleCode: "INVT_ADMIN" },
-  { module: "contacts", roleCode: "INVT_ADMIN" },
-  { module: "purchasing", roleCode: "INVT_ADMIN" },
-  { module: "finance", roleCode: "INVT_ADMIN" },
-  { module: "hr", roleCode: "INVT_ADMIN" },
-  { module: "reporting", roleCode: "INVT_ADMIN" },
+  { module: "inventory", roleCode: "COMPANY_ADMIN" },
+  { module: "roles", roleCode: "COMPANY_ADMIN" },
 ] as const;
 
 type BootstrapModule = (typeof BOOTSTRAP_MODULES)[number];

@@ -7,10 +7,10 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get("/", authorize("branches", "view"), branchesController.list);
+router.get("/", authorize("access", "view"), branchesController.list);
 router.post(
   "/",
-  authorize("branches", "manage_branches"),
+  authorize("access", "manage_branches"),
   branchesController.create,
 );
 

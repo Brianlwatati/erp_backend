@@ -87,8 +87,10 @@ CREATE TABLE IF NOT EXISTS erp_employees (
   phone VARCHAR(50),
 
   department_id BIGINT,
+  department_name VARCHAR(150),
 
   job_title_id BIGINT,
+  job_title_name VARCHAR(150),
 
   hire_date DATE,
 

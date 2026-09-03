@@ -47,6 +47,8 @@ VALUES
   ('finance', 'view'),
   ('finance', 'manage_invoices'),
   ('finance', 'post_payment'),
+  ('finance', 'manage_payables'),
+  ('finance', 'post_supplier_payment'),
   ('finance', 'view_reports'),
   ('finance', 'post_journal'),
 
