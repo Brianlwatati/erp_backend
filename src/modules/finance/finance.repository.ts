@@ -45,6 +45,7 @@ export const financeRepository = {
     ),
   invoiceItems: (id: number) =>
     query(`SELECT * FROM erp_invoice_items WHERE invoice_id=$1`, [id]),
+
   createFromOrder: async (id: number, c: number, u: number) =>
     withTransaction(async (client) => {
       const o = await client.query(
@@ -88,8 +89,9 @@ export const financeRepository = {
       ).rows[0];
       for (const i of items.rows)
         await client.query(
-          `INSERT INTO erp_invoice_items(invoice_id,product_id,product_sku,product_name,quantity,unit_price,tax_rate,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
+          `INSERT INTO erp_invoice_items( ias_company_id, invoice_id,product_id,product_sku,product_name,quantity,unit_price,tax_rate,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
           [
+            c,
             inv.id,
             i.product_id,
             i.product_sku,
@@ -102,14 +104,16 @@ export const financeRepository = {
         );
       return inv;
     }),
+
   payment: async (c: number, u: number, x: any) =>
     withTransaction(async (client) => {
       const p = (
         await client.query(
-          `INSERT INTO erp_payments(ias_company_id,customer_id,payment_reference,amount,payment_date,method,notes,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+          `INSERT INTO erp_payments(ias_company_id,customer_id,payment_reference,amount,payment_date,method,notes,created_by) 
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
           [
             c,
-            x.customerId,
+            x.customerId ?? null,
             x.paymentReference || `PAY-${Date.now()}`,
             x.amount,
             x.paymentDate || null,
@@ -132,8 +136,8 @@ export const financeRepository = {
         const applied = Math.min(Number(a.amount), due, remaining);
         if (applied <= 0) continue;
         await client.query(
-          `INSERT INTO erp_payment_allocations(payment_id,invoice_id,amount) VALUES($1,$2,$3)`,
-          [p.id, a.invoiceId, applied],
+          `INSERT INTO erp_payment_allocations( ias_company_id, payment_id,invoice_id,amount) VALUES($1,$2,$3,$4)`,
+          [c, p.id, a.invoiceId, applied],
         );
         const paid = Number(inv.rows[0].paid_amount) + applied;
         await client.query(
@@ -150,6 +154,7 @@ export const financeRepository = {
       }
       return p;
     }),
+
   journal: (c: number, u: number, x: any) =>
     withTransaction(async (client) => {
       const debit = x.lines.reduce(
@@ -192,17 +197,34 @@ export const financeRepository = {
       `SELECT b.*,s.name AS "supplierName",b.total_amount-b.paid_amount AS outstanding FROM erp_supplier_bills b JOIN erp_contacts s ON s.id=b.supplier_id WHERE b.ias_company_id=$1 ORDER BY b.issue_date DESC,b.id DESC`,
       [c],
     ),
+
+  supplierBill: (id: number, c: number) =>
+    queryOne(
+      `SELECT b.*,s.name AS "supplierName" FROM erp_supplier_bills b JOIN erp_contacts s ON s.id=b.supplier_id WHERE b.id=$1 AND b.ias_company_id=$2`,
+      [id, c],
+    ),
+
+  supplierBillItems: (id: number) =>
+    query(`SELECT * FROM erp_supplier_bill_items WHERE supplier_bill_id=$1`, [
+      id,
+    ]),
+
   ap: (c: number) =>
     query(
-      `SELECT b.*,s.name AS "supplierName",b.total_amount-b.paid_amount AS outstanding FROM erp_supplier_bills b JOIN erp_contacts s ON s.id=b.supplier_id WHERE b.ias_company_id=$1 AND b.status<>'PAID' ORDER BY b.due_date NULLS LAST,b.issue_date DESC`,
+      `SELECT b.*,s.name AS "supplierName",b.total_amount-b.paid_amount AS outstanding 
+      FROM erp_supplier_bills b 
+      JOIN erp_contacts s ON s.id=b.supplier_id WHERE b.ias_company_id=$1 AND b.status<>'PAID'
+       ORDER BY b.due_date NULLS LAST,b.issue_date DESC`,
       [c],
     ),
+
   supplierBillFromOrder: async (id: number, c: number, u: number) =>
     withTransaction(async (client) => {
       const order = await client.query(
         `SELECT * FROM erp_purchase_orders WHERE id=$1 AND ias_company_id=$2 FOR UPDATE`,
         [id, c],
       );
+      console.log("order", order.rows[0]);
       if (!order.rowCount) throw new Error("Purchase order not found");
       if (order.rows[0].status !== "RECEIVED")
         throw new Error("Purchase order must be fully received before billing");
@@ -218,7 +240,9 @@ export const financeRepository = {
       );
       const bill = (
         await client.query(
-          `INSERT INTO erp_supplier_bills(ias_company_id,bill_number,supplier_id,purchase_order_id,status,currency,subtotal,tax_amount,total_amount,created_by) VALUES($1,$2,$3,$4,'OPEN',$5,$6,$7,$8,$9) RETURNING *`,
+          `INSERT INTO erp_supplier_bills(ias_company_id,bill_number,supplier_id,purchase_order_id,
+          status,currency,subtotal,tax_amount,total_amount,created_by)
+           VALUES($1,$2,$3,$4,'OPEN',$5,$6,$7,$8,$9) RETURNING *`,
           [
             c,
             `BILL-${Date.now()}`,
@@ -234,7 +258,8 @@ export const financeRepository = {
       ).rows[0];
       for (const item of items.rows) {
         await client.query(
-          `INSERT INTO erp_supplier_bill_items(ias_company_id,supplier_bill_id,product_id,product_sku,product_name,quantity,unit_cost,tax_rate,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          `INSERT INTO erp_supplier_bill_items(ias_company_id,supplier_bill_id,product_id,product_sku,product_name,
+          quantity,unit_cost,tax_rate,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
           [
             c,
             bill.id,
@@ -248,28 +273,29 @@ export const financeRepository = {
           ],
         );
       }
-      await postJournal(
-        client,
-        c,
-        u,
-        "SUPPLIER_BILL",
-        bill.id,
-        `Supplier bill ${bill.bill_number}`,
-        [
-          {
-            accountCode: "INVENTORY",
-            debit: Number(bill.total_amount),
-            credit: 0,
-          },
-          {
-            accountCode: "ACCOUNTS_PAYABLE",
-            debit: 0,
-            credit: Number(bill.total_amount),
-          },
-        ],
-      );
+      // await postJournal(
+      //   client,
+      //   c,
+      //   u,
+      //   "SUPPLIER_BILL",
+      //   bill.id,
+      //   `Supplier bill ${bill.bill_number}`,
+      //   [
+      //     {
+      //       accountCode: "INVENTORY",
+      //       debit: Number(bill.total_amount),
+      //       credit: 0,
+      //     },
+      //     {
+      //       accountCode: "ACCOUNTS_PAYABLE",
+      //       debit: 0,
+      //       credit: Number(bill.total_amount),
+      //     },
+      //   ],
+      // );
       return bill;
     }),
+
   supplierPayment: async (c: number, u: number, x: any) =>
     withTransaction(async (client) => {
       const payment = (

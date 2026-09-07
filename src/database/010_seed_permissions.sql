@@ -43,6 +43,13 @@ VALUES
   ('crm', 'manage_contacts'),
   ('crm', 'log_interaction'),
 
+  -- CONTACTS
+  ('contacts', 'view'),
+  ('contacts', 'create_contact'),
+  ('contacts', 'manage_contacts'),
+  ('contacts', 'approve_contact'),
+  ('contacts', 'log_interaction'),
+
   -- Finance
   ('finance', 'view'),
   ('finance', 'manage_invoices'),

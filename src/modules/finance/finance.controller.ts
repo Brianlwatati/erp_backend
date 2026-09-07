@@ -35,6 +35,20 @@ const supplierPayment = z.object({
     )
     .min(1),
 });
+const supplierCreditNote = z
+  .object({
+    supplierId: z.number().int().positive().optional(),
+    orderId: z.number().int().positive().optional(),
+    billId: z.number().int().positive().optional(),
+    creditNoteNumber: z.string().optional(),
+    amount: z.number().positive(),
+    issueDate: z.string().optional(),
+    reason: z.string().min(1),
+  })
+  .refine((value) => value.orderId || value.billId, {
+    message: "orderId or billId is required",
+    path: ["orderId"],
+  });
 const journal = z.object({
   description: z.string().min(1),
   referenceType: z.string().optional(),
@@ -99,9 +113,18 @@ export const financeController = {
   supplierBills: asyncHandler(async (req, res) =>
     ok(res, await r.supplierBills(req.auth!.companyId)),
   ),
+  supplierBill: asyncHandler(async (req, res) => {
+    const x = await r.supplierBill(Number(req.params.id), req.auth!.companyId);
+    if (!x) return fail(res, "Supplier bill not found", 404);
+    ok(res, {
+      ...x,
+      items: await r.supplierBillItems((x as { id: number }).id),
+    });
+  }),
   ap: asyncHandler(async (req, res) =>
     ok(res, await r.ap(req.auth!.companyId)),
   ),
+
   supplierBillFromOrder: asyncHandler(async (req, res) =>
     call(
       res,
@@ -123,6 +146,7 @@ export const financeController = {
       "Supplier payment recorded",
     );
   }),
+
   journal: asyncHandler(async (req, res) => {
     const p = journal.safeParse(req.body);
     if (!p.success) return fail(res, "Invalid input", 422, p.error.flatten());

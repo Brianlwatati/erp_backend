@@ -85,10 +85,11 @@ export const salesRepository = {
       );
       for (const i of prepared)
         await client.query(
-          `INSERT INTO erp_sales_order_items(sales_order_id,product_id,product_sku,product_name, 
+          `INSERT INTO erp_sales_order_items(ias_company_id, sales_order_id,product_id,product_sku,product_name, 
           warehouse_id,warehouse_name,
-          quantity,unit_price,discount_amount,tax_rate,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+          quantity,unit_price,discount_amount,tax_rate,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
           [
+            c,
             o.rows[0].id,
             i.productId,
             i.sku,
@@ -151,7 +152,6 @@ export const salesRepository = {
         [id, c],
       );
 
-      console.log("Sales order query result:", o.rows); // Debugging line
       if (!o.rowCount) throw new Error("Sales order not found");
       if (o.rows[0].status !== "CONFIRMED")
         throw new Error("Only CONFIRMED orders can ship");
@@ -169,7 +169,8 @@ export const salesRepository = {
         if (!s.rowCount)
           throw new Error(`No stock record for product ${i.product_sku}`);
         await client.query(
-          `UPDATE erp_stock_levels SET quantity=quantity-$1,reserved_quantity=reserved_quantity-$1,
+          `UPDATE erp_stock_levels SET quantity=quantity-$1,
+          reserved_quantity=GREATEST(reserved_quantity-$1, 0),
           updated_at=now() WHERE id=$2`,
           [i.quantity, s.rows[0].id],
         );

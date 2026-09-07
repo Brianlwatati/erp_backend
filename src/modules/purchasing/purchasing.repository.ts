@@ -38,7 +38,11 @@ export const purchasingRepository = {
       }
       const o = (
         await client.query(
-          `INSERT INTO erp_purchase_orders(ias_company_id,po_number,supplier_id,warehouse_id,status,expected_date,currency,subtotal,tax_amount,total_amount,notes,created_by) VALUES($1,$2,$3,$4,'DRAFT',$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+          `INSERT INTO erp_purchase_orders
+          (ias_company_id,po_number,supplier_id,warehouse_id,
+          status,expected_date,currency,
+          subtotal,tax_amount,total_amount,notes,created_by) 
+          VALUES($1,$2,$3,$4,'DRAFT',$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
           [
             c,
             x.poNumber || `PO-${Date.now()}`,
