@@ -570,7 +570,7 @@ export const inventoryRepository = {
          warehouse_name
        )
        VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (product_id, warehouse_id)
+      ON CONFLICT (ias_company_id, product_id, warehouse_id)
        DO NOTHING`,
       [
         input.iasCompanyId,
@@ -586,10 +586,11 @@ export const inventoryRepository = {
     // cannot calculate from the same stale quantity.
     const lockResult = await client.query<RawStockLevel>(
       `${SELECT_STOCK_LEVEL}
-       WHERE product_id = $1
-         AND warehouse_id = $2
+       WHERE ias_company_id = $1
+         AND product_id = $2
+         AND warehouse_id = $3
        FOR UPDATE`,
-      [input.productId, input.warehouseId],
+      [input.iasCompanyId, input.productId, input.warehouseId],
     );
 
     const current = lockResult.rows[0]!;
@@ -765,7 +766,7 @@ export const inventoryRepository = {
            warehouse_name
          )
          VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (product_id, warehouse_id)
+         ON CONFLICT (ias_company_id, product_id, warehouse_id)
          DO NOTHING`,
         [
           input.iasCompanyId,
@@ -780,10 +781,11 @@ export const inventoryRepository = {
       // Lock source stock level.
       const lockResult = await client.query<RawStockLevel>(
         `${SELECT_STOCK_LEVEL}
-         WHERE product_id = $1
-           AND warehouse_id = $2
+         WHERE ias_company_id = $1
+           AND product_id = $2
+           AND warehouse_id = $3
          FOR UPDATE`,
-        [input.productId, input.fromWarehouseId],
+        [input.iasCompanyId, input.productId, input.fromWarehouseId],
       );
 
       const source = lockResult.rows[0]!;
@@ -933,7 +935,7 @@ export const inventoryRepository = {
             warehouse_name
          )
          VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (product_id, warehouse_id)
+         ON CONFLICT (ias_company_id, product_id, warehouse_id)
          DO NOTHING`,
         [
           input.iasCompanyId,
@@ -947,10 +949,11 @@ export const inventoryRepository = {
 
       const lockResult = await client.query<RawStockLevel>(
         `${SELECT_STOCK_LEVEL}
-         WHERE product_id = $1
-           AND warehouse_id = $2
+         WHERE ias_company_id = $1
+           AND product_id = $2
+           AND warehouse_id = $3
          FOR UPDATE`,
-        [input.productId, input.warehouseId],
+        [input.iasCompanyId, input.productId, input.warehouseId],
       );
       const systemQuantity = Number(lockResult.rows[0]!.quantity);
       const variance = input.countedQuantity - systemQuantity;

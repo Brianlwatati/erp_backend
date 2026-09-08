@@ -4,7 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -17,6 +17,6 @@
     "sourceMap": true,
     "noImplicitOverride": true
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "routes/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

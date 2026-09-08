@@ -8,6 +8,17 @@ import { ok, fail } from "../../utils/apiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 
 export const provisioningController = {
+  onPing: asyncHandler(async (req: Request, res: Response) => {
+    ok(
+      res,
+      {
+        received: true,
+        payload: req.body ?? null,
+      },
+      "IAS webhook received",
+    );
+  }),
+
   onCompanyProvisioned: asyncHandler(async (req: Request, res: Response) => {
     const parsed = companyProvisionedSchema.safeParse(req.body);
     if (!parsed.success)
