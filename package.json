@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "description": "ERP service — User & Access Management and Inventory, with identity delegated to IAS",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "migrate": "tsx src/database/migrate.ts",
