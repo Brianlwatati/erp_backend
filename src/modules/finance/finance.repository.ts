@@ -218,6 +218,74 @@ export const financeRepository = {
       [c],
     ),
 
+  expenses: (c: number) =>
+    query(
+      `SELECT e.*,s.name AS "supplierName"
+       FROM erp_operating_expenses e
+       LEFT JOIN erp_contacts s ON s.id=e.supplier_id AND s.ias_company_id=e.ias_company_id
+       WHERE e.ias_company_id=$1 ORDER BY e.expense_date DESC,e.id DESC`,
+      [c],
+    ),
+
+  expense: (id: number, c: number) =>
+    queryOne(
+      `SELECT e.*,s.name AS "supplierName"
+       FROM erp_operating_expenses e
+       LEFT JOIN erp_contacts s ON s.id=e.supplier_id AND s.ias_company_id=e.ias_company_id
+       WHERE e.id=$1 AND e.ias_company_id=$2`,
+      [id, c],
+    ),
+
+  createExpense: async (c: number, u: number, x: any) =>
+    withTransaction(async (client) => {
+      const expense = (
+        await client.query(
+          `INSERT INTO erp_operating_expenses
+           (ias_company_id,expense_number,expense_date,category,description,amount,currency,
+            payment_method,payment_account_code,supplier_id,reference,notes,created_by)
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+          [
+            c,
+            x.expenseNumber || `EXP-${Date.now()}`,
+            x.expenseDate || null,
+            x.category,
+            x.description,
+            x.amount,
+            x.currency || "KES",
+            x.paymentMethod || "CASH",
+            x.paymentAccountCode ||
+              (x.paymentMethod === "CREDIT" ? "ACCOUNTS_PAYABLE" : "CASH"),
+            x.supplierId ?? null,
+            x.reference ?? null,
+            x.notes ?? null,
+            u,
+          ],
+        )
+      ).rows[0];
+      await postJournal(
+        client,
+        c,
+        u,
+        "OPERATING_EXPENSE",
+        expense.id,
+        `${expense.category}: ${expense.description}`,
+        [
+          {
+            accountCode: expense.category,
+            debit: Number(expense.amount),
+            credit: 0,
+          },
+          {
+            accountCode: expense.payment_account_code,
+            debit: 0,
+            credit: Number(expense.amount),
+          },
+        ],
+        expense.expense_date,
+      );
+      return expense;
+    }),
+
   supplierBillFromOrder: async (id: number, c: number, u: number) =>
     withTransaction(async (client) => {
       const order = await client.query(

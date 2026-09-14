@@ -2,7 +2,9 @@ import { query } from "../../config/db.js";
 export const reportingRepository = {
   dashboard: (c: number) =>
     query(
-      `SELECT (SELECT COALESCE(SUM(total_amount),0) FROM erp_sales_orders WHERE ias_company_id=$1 AND status NOT IN ('CANCELLED','DRAFT')) AS "salesValue",(SELECT COALESCE(SUM(total_amount-paid_amount),0) FROM erp_invoices WHERE ias_company_id=$1 AND status<>'PAID') AS "outstandingInvoices",(SELECT COALESCE(SUM(sl.quantity*sl.average_cost),0) FROM erp_stock_levels sl WHERE sl.ias_company_id=$1) AS "stockValue",(SELECT COUNT(*) FROM erp_sales_orders WHERE ias_company_id=$1 AND status IN ('DRAFT','CONFIRMED')) AS "openOrders",(SELECT COUNT(*) FROM erp_purchase_orders WHERE ias_company_id=$1 AND status IN ('DRAFT','APPROVED','PARTIALLY_RECEIVED')) AS "openPurchaseOrders"`,
+      `SELECT (SELECT COALESCE(SUM(total_amount),0) 
+      FROM erp_sales_orders WHERE ias_company_id=$1 AND 
+      status NOT IN ('CANCELLED','DRAFT')) AS "salesValue", (SELECT COALESCE(SUM(total_amount-paid_amount),0) FROM erp_invoices WHERE ias_company_id=$1 AND status<>'PAID') AS "outstandingInvoices",(SELECT COALESCE(SUM(amount),0) FROM erp_operating_expenses WHERE ias_company_id=$1) AS "operatingExpenses",(SELECT COALESCE(SUM(sl.quantity*sl.average_cost),0) FROM erp_stock_levels sl WHERE sl.ias_company_id=$1) AS "stockValue",(SELECT COUNT(*) FROM erp_sales_orders WHERE ias_company_id=$1 AND status IN ('DRAFT','CONFIRMED')) AS "openOrders",(SELECT COUNT(*) FROM erp_purchase_orders WHERE ias_company_id=$1 AND status IN ('DRAFT','APPROVED','PARTIALLY_RECEIVED')) AS "openPurchaseOrders"`,
       [c],
     ).then((r) => r[0]),
   sales: (c: number, from?: string, to?: string) =>

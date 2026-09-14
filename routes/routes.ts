@@ -15,6 +15,7 @@ import contactsRoutes from "../src/modules/contacts/contacts.routes.js";
 import financeRoutes from "../src/modules/finance/finance.routes.js";
 import hrRoutes from "../src/modules/hr/hr.routes.js";
 import reportingRoutes from "../src/modules/reporting/reporting.routes.js";
+import reportDeliveryRoutes from "../src/modules/report-delivery/report-delivery.routes.js";
 import workflowRoutes from "../src/modules/workflow/workflow.routes.js";
 
 const API_PREFIX = "/api/v1";
@@ -35,6 +36,7 @@ export function registerRoutes(app: Express): void {
   app.use(`${API_PREFIX}/finance`, financeRoutes);
   app.use(`${API_PREFIX}/hr`, hrRoutes);
   app.use(`${API_PREFIX}/reporting`, reportingRoutes);
+  app.use(`${API_PREFIX}/report-delivery`, reportDeliveryRoutes);
   app.use(`${API_PREFIX}/workflow`, workflowRoutes);
 
   // Called by IAS on provisioning events, not by the frontend.

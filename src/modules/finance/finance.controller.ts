@@ -49,6 +49,19 @@ const supplierCreditNote = z
     message: "orderId or billId is required",
     path: ["orderId"],
   });
+const expense = z.object({
+  expenseNumber: z.string().optional(),
+  expenseDate: z.string().optional(),
+  category: z.string().min(1),
+  description: z.string().min(1),
+  amount: z.number().positive(),
+  currency: z.string().optional(),
+  paymentMethod: z.enum(["CASH", "BANK", "CREDIT"]).optional(),
+  paymentAccountCode: z.string().min(1).optional(),
+  supplierId: z.number().int().positive().optional(),
+  reference: z.string().optional(),
+  notes: z.string().optional(),
+});
 const journal = z.object({
   description: z.string().min(1),
   referenceType: z.string().optional(),
@@ -124,6 +137,23 @@ export const financeController = {
   ap: asyncHandler(async (req, res) =>
     ok(res, await r.ap(req.auth!.companyId)),
   ),
+  expenses: asyncHandler(async (req, res) =>
+    ok(res, await r.expenses(req.auth!.companyId)),
+  ),
+  expense: asyncHandler(async (req, res) => {
+    const x = await r.expense(Number(req.params.id), req.auth!.companyId);
+    if (!x) return fail(res, "Expense not found", 404);
+    ok(res, x);
+  }),
+  createExpense: asyncHandler(async (req, res) => {
+    const p = expense.safeParse(req.body);
+    if (!p.success) return fail(res, "Invalid input", 422, p.error.flatten());
+    await call(
+      res,
+      () => r.createExpense(req.auth!.companyId, req.auth!.userId, p.data),
+      "Expense recorded",
+    );
+  }),
 
   supplierBillFromOrder: asyncHandler(async (req, res) =>
     call(

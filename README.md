@@ -212,6 +212,35 @@ supplier bill; post a linked credit or reversal instead.
 
 ## Getting started
 
+## Operating expenses
+
+Operating costs that do not create inventory can be recorded through the
+finance API. An expense has a category/account code, description, amount,
+optional supplier, and payment method. Recording it posts `Dr <category>`
+against `Cr CASH`, `Cr BANK`, or `Cr ACCOUNTS_PAYABLE` for credit expenses.
+
+```http
+POST /api/v1/finance/expenses
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+```json
+{
+  "category": "ELECTRICITY_EXPENSE",
+  "description": "August office electricity",
+  "amount": 18500,
+  "paymentMethod": "BANK",
+  "paymentAccountCode": "BANK",
+  "expenseDate": "2026-08-31",
+  "supplierId": 42
+}
+```
+
+Use `GET /api/v1/finance/expenses` to list expenses. Run the migrations before
+using this endpoint; the migration also adds the `finance:post_expense`
+permission.
+
 This project uses **Node.js ESM** consistently. `package.json` sets `"type": "module"` and `tsconfig.json` uses `module`/`moduleResolution: "NodeNext"`. Relative TypeScript imports intentionally use `.js` extensions so the compiled `dist/` output runs directly in Node.
 
 ```bash
@@ -223,7 +252,7 @@ npm run migrate
 npm run dev
 ```
 
-Do not use `module: commonjs` with this project. The migration runner is executed with `tsx` and the production build is executed with `node dist/index.js` using the same ESM model.
+Do not use `module: commonjs` with this project. The migration runner is executed with `tsx` and the production build is executed with `node dist/src/index.js` using the same ESM model.
 
 ### Database commands
 

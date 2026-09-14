@@ -29,6 +29,9 @@ r.post(
 );
 
 r.get("/payables", authorize("finance", "view_reports"), c.ap);
+r.get("/expenses", authorize("finance", "view_reports"), c.expenses);
+r.get("/expenses/:id", authorize("finance", "view_reports"), c.expense);
+r.post("/expenses", authorize("finance", "post_expense"), c.createExpense);
 r.post(
   "/supplier-payments",
   authorize("finance", "post_supplier_payment"),

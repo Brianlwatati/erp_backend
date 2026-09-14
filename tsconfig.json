@@ -17,6 +17,6 @@
     "sourceMap": true,
     "noImplicitOverride": true
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "routes/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

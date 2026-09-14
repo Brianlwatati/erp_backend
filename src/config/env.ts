@@ -10,6 +10,7 @@ function required(name: string): string {
 
 export const env = {
   port: Number(process.env.PORT ?? 4100),
+  host: process.env.HOST ?? "0.0.0.0",
   nodeEnv: process.env.NODE_ENV ?? "development",
   databaseUrl: required("DATABASE_URL"),
   iasBaseUrl: required("IAS_BASE_URL").replace(/\/$/, ""),
@@ -27,4 +28,17 @@ export const env = {
   // diffing the two configs.
   jwtAccessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? "15m",
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? "7d",
+
+  // Report delivery (email/WhatsApp). Left optional rather than `required()`
+  // since a deployment may only use one channel — missing values only
+  // surface as an error when that channel actually tries to send.
+  smtpHost: process.env.SMTP_HOST ?? "",
+  smtpPort: Number(process.env.SMTP_PORT ?? 587),
+  smtpUser: process.env.SMTP_USER ?? "",
+  smtpPassword: process.env.SMTP_PASSWORD ?? "",
+  smtpFromAddress: process.env.SMTP_FROM_ADDRESS ?? "brayozsagalla@gmail.com",
+  whatsappPhoneNumberId:
+    process.env.WHATSAPP_PHONE_NUMBER_ID ?? "+254705161125",
+  whatsappAccessToken: process.env.WHATSAPP_ACCESS_TOKEN ?? "",
+  reportDeliveryEnabled: process.env.REPORT_DELIVERY_ENABLED !== "false",
 };
