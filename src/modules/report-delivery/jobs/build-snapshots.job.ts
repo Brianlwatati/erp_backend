@@ -55,8 +55,7 @@ function isoDate(d: Date): string {
 // snapshot of the right period type, so it doesn't need to know which
 // day of the week this ran on.
 export async function buildSnapshots(): Promise<void> {
-  const companies =
-    await reportDeliveryRepository.companiesWithActiveSubscriptions();
+  const companies = await reportDeliveryRepository.companiesWithActiveSubscriptions();
 
   const yesterday = new Date();
   yesterday.setUTCDate(yesterday.getUTCDate() - 1);
@@ -87,10 +86,7 @@ export async function buildSnapshots(): Promise<void> {
       );
     } catch (err) {
       // One company's aggregation failing shouldn't block the rest.
-      console.error(
-        `report-delivery: snapshot build failed for company ${iasCompanyId}`,
-        err,
-      );
+      console.error(`report-delivery: snapshot build failed for company ${iasCompanyId}`, err);
     }
   }
 }

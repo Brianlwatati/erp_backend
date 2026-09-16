@@ -36,9 +36,17 @@ export const env = {
   smtpPort: Number(process.env.SMTP_PORT ?? 587),
   smtpUser: process.env.SMTP_USER ?? "",
   smtpPassword: process.env.SMTP_PASSWORD ?? "",
-  smtpFromAddress: process.env.SMTP_FROM_ADDRESS ?? "brayozsagalla@gmail.com",
-  whatsappPhoneNumberId:
-    process.env.WHATSAPP_PHONE_NUMBER_ID ?? "+254705161125",
-  whatsappAccessToken: process.env.WHATSAPP_ACCESS_TOKEN ?? "",
+  smtpFromAddress: process.env.SMTP_FROM_ADDRESS ?? "reports@example.com",
+  // Self-hosted OpenWA gateway (github.com/rmyndharis/OpenWA), used instead
+  // of Meta's Cloud API since Meta's service is restricted in-region.
+  // openwaSessionId must refer to a session that's already been started
+  // and QR-linked to a dedicated WhatsApp number via OpenWA's own
+  // dashboard/API — this service only sends through it, it doesn't create
+  // or link sessions.
+  openwaBaseUrl: (
+    process.env.OPENWA_BASE_URL ?? "http://localhost:2785"
+  ).replace(/\/$/, ""),
+  openwaApiKey: process.env.OPENWA_API_KEY ?? "",
+  openwaSessionId: process.env.OPENWA_SESSION_ID ?? "",
   reportDeliveryEnabled: process.env.REPORT_DELIVERY_ENABLED !== "false",
 };

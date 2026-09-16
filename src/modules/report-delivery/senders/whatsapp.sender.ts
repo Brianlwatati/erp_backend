@@ -1,42 +1,40 @@
 import axios from "axios";
 import { env } from "../../../config/env.js";
 
-// Meta requires outbound messages sent outside a 24h customer-initiated
-// window to use a pre-approved template — plain free text will be
-// rejected for a scheduled report like this. `templateName` must match a
-// template already approved in Meta Business Manager, with the same
-// number/order of {{n}} variables as `bodyParams`.
+// Sends through a self-hosted OpenWA gateway (github.com/rmyndharis/OpenWA)
+// instead of Meta's Cloud API — Meta's service is restricted in-region.
+// Unlike Meta, OpenWA drives a real WhatsApp client under the hood, so it
+// can send free-form text at any time; no pre-approved template needed.
+//
+// Caveats worth remembering (see OpenWA's own README):
+// - It's an unofficial client (whatsapp-web.js/baileys), so there's a
+//   non-zero risk of the linked number being restricted by WhatsApp.
+// - The session (`env.openwaSessionId`) must already be created, started,
+//   and QR-linked to a dedicated number via OpenWA's own dashboard/API —
+//   this sender only calls an existing, already-linked session.
+// - Keep sends to opted-in recipients (your own clients expecting a
+//   report) and respect OpenWA's rate limiting; this isn't a bulk/cold
+//   messaging channel.
+function toChatId(recipient: string): string {
+  const digits = recipient.replace(/\D/g, "");
+  return `${digits}@c.us`;
+}
+
 export async function sendReportWhatsApp(params: {
   to: string;
-  templateName: string;
-  languageCode?: string;
-  bodyParams: string[];
+  text: string;
 }): Promise<void> {
-  const url = `https://graph.facebook.com/v20.0/${env.whatsappPhoneNumberId}/messages`;
+  const url = `${env.openwaBaseUrl}/api/sessions/${env.openwaSessionId}/messages/send-text`;
 
   await axios.post(
     url,
     {
-      messaging_product: "whatsapp",
-      to: params.to,
-      type: "template",
-      template: {
-        name: params.templateName,
-        language: { code: params.languageCode ?? "en_US" },
-        components: [
-          {
-            type: "body",
-            parameters: params.bodyParams.map((text) => ({
-              type: "text",
-              text,
-            })),
-          },
-        ],
-      },
+      chatId: toChatId(params.to),
+      text: params.text,
     },
     {
       headers: {
-        Authorization: `Bearer ${env.whatsappAccessToken}`,
+        "X-API-Key": env.openwaApiKey,
         "Content-Type": "application/json",
       },
     },

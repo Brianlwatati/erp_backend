@@ -107,11 +107,7 @@ export const reportDeliveryRepository = {
 
   // ---- subscriptions due right now (used by the dispatch job, not exposed via API) ----
 
-  dueNow: (
-    frequency: "DAILY" | "WEEKLY",
-    dayOfWeek: number,
-    timeOfDay: string,
-  ) =>
+  dueNow: (frequency: "DAILY" | "WEEKLY", dayOfWeek: number, timeOfDay: string) =>
     query<ErpReportSubscription>(
       `SELECT id, ias_company_id AS "iasCompanyId", channel, frequency,
               day_of_week AS "dayOfWeek", time_of_day AS "timeOfDay",

@@ -1,24 +1,20 @@
 import type { ErpReportSnapshot } from "../../../types/domain.js";
 
-// Maps a snapshot onto the {{1}}..{{n}} body variables of the approved
-// "daily_report_notification" / "weekly_report_notification" Meta
-// templates. Keep this in sync with whatever template text is approved —
-// the variable count and order must match exactly.
-export function formatReportWhatsApp(snapshot: ErpReportSnapshot): {
-  templateName: string;
-  bodyParams: string[];
-} {
-  const { data, periodType, periodEnd } = snapshot;
-  return {
-    templateName:
-      periodType === "DAILY"
-        ? "daily_report_notification"
-        : "weekly_report_notification",
-    bodyParams: [
-      periodEnd,
-      data.salesValue.toFixed(2),
-      String(data.ordersCount),
-      data.outstandingInvoices.toFixed(2),
-    ],
-  };
+// OpenWA sends free-form text through a real WhatsApp client, so unlike
+// Meta's Cloud API this doesn't need a pre-approved template — just build
+// the message body directly from the snapshot.
+export function formatReportWhatsApp(snapshot: ErpReportSnapshot): { text: string } {
+  const { data, periodType, periodStart, periodEnd } = snapshot;
+  const label = periodType === "DAILY" ? "Daily" : "Weekly";
+
+  const text = [
+    `*${label} report* (${periodStart} to ${periodEnd})`,
+    `Sales value: ${data.salesValue.toFixed(2)}`,
+    `Orders: ${data.ordersCount}`,
+    `Outstanding invoices: ${data.outstandingInvoices.toFixed(2)}`,
+    `Stock value: ${data.stockValue.toFixed(2)}`,
+    `Low stock items: ${data.lowStockCount}`,
+  ].join("\n");
+
+  return { text };
 }

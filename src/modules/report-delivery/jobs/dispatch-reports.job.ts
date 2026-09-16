@@ -38,22 +38,15 @@ export async function dispatchReports(): Promise<void> {
         const { subject, html } = formatReportEmail(snapshot);
         await sendReportEmail({ to: sub.recipient, subject, html });
       } else {
-        const { templateName, bodyParams } = formatReportWhatsApp(snapshot);
-        await sendReportWhatsApp({
-          to: sub.recipient,
-          templateName,
-          bodyParams,
-        });
+        const { text } = formatReportWhatsApp(snapshot);
+        await sendReportWhatsApp({ to: sub.recipient, text });
       }
 
       await r.logSend(sub.id, snapshot.id, "SUCCESS");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown send error";
       await r.logSend(sub.id, null, "FAILED", message);
-      console.error(
-        `report-delivery: dispatch failed for subscription ${sub.id}`,
-        err,
-      );
+      console.error(`report-delivery: dispatch failed for subscription ${sub.id}`, err);
     }
   }
 }
