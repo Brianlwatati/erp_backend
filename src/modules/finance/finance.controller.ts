@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 import { ok, fail } from "../../utils/apiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
@@ -8,7 +8,6 @@ const payment = z.object({
   paymentReference: z.string().optional(),
   amount: z.number().positive(),
   paymentDate: z.string().optional(),
-  method: z.string().optional(),
   notes: z.string().optional(),
   allocations: z
     .array(
@@ -49,7 +48,7 @@ const supplierCreditNote = z
     message: "orderId or billId is required",
     path: ["orderId"],
   });
-const expense = z.object({
+const operatingExpenseInput = z.object({
   expenseNumber: z.string().optional(),
   expenseDate: z.string().optional(),
   category: z.string().min(1),
@@ -84,7 +83,26 @@ const call = async (res: Response, fn: () => Promise<any>, msg?: string) => {
     fail(res, e instanceof Error ? e.message : "Operation failed", 409);
   }
 };
-export const financeController = {
+type FinanceHandler = (req: Request, res: Response, next: NextFunction) => void;
+
+interface FinanceController {
+  invoices: FinanceHandler;
+  invoice: FinanceHandler;
+  fromOrder: FinanceHandler;
+  payment: FinanceHandler;
+  ar: FinanceHandler;
+  supplierBills: FinanceHandler;
+  supplierBill: FinanceHandler;
+  ap: FinanceHandler;
+  expenses: FinanceHandler;
+  expense: FinanceHandler;
+  createExpense: FinanceHandler;
+  supplierBillFromOrder: FinanceHandler;
+  supplierPayment: FinanceHandler;
+  journal: FinanceHandler;
+}
+
+export const financeController: FinanceController = {
   invoices: asyncHandler(async (req, res) =>
     ok(
       res,
@@ -146,7 +164,7 @@ export const financeController = {
     ok(res, x);
   }),
   createExpense: asyncHandler(async (req, res) => {
-    const p = expense.safeParse(req.body);
+    const p = operatingExpenseInput.safeParse(req.body);
     if (!p.success) return fail(res, "Invalid input", 422, p.error.flatten());
     await call(
       res,
