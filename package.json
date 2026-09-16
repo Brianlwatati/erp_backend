@@ -12,7 +12,9 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "migrate": "tsx src/database/migrate.ts",
-    "db:check": "tsx src/database/db-check.ts"
+    "db:check": "tsx src/database/db-check.ts",
+    "report:snapshot": "tsx src/scripts/run-report-snapshot.ts",
+    "report:dispatch": "tsx src/scripts/run-report-dispatch.ts"
   },
   "dependencies": {
     "express": "^5.0.1",

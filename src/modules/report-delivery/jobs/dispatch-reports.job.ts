@@ -18,12 +18,15 @@ function nowParts(): { dayOfWeek: number; hhmm: string } {
   };
 }
 
-export async function dispatchReports(): Promise<void> {
+export async function dispatchReports(
+  options: { ignoreSchedule?: boolean } = {},
+): Promise<void> {
   const { dayOfWeek, hhmm } = nowParts();
+  const ignoreSchedule = options.ignoreSchedule ?? false;
 
   const due = [
-    ...(await r.dueNow("DAILY", dayOfWeek, hhmm)),
-    ...(await r.dueNow("WEEKLY", dayOfWeek, hhmm)),
+    ...(await r.dueNow("DAILY", dayOfWeek, hhmm, ignoreSchedule)),
+    ...(await r.dueNow("WEEKLY", dayOfWeek, hhmm, ignoreSchedule)),
   ];
 
   for (const sub of due) {
@@ -46,7 +49,10 @@ export async function dispatchReports(): Promise<void> {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown send error";
       await r.logSend(sub.id, null, "FAILED", message);
-      console.error(`report-delivery: dispatch failed for subscription ${sub.id}`, err);
+      console.error(
+        `report-delivery: dispatch failed for subscription ${sub.id}`,
+        err,
+      );
     }
   }
 }

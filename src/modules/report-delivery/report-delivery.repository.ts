@@ -107,7 +107,12 @@ export const reportDeliveryRepository = {
 
   // ---- subscriptions due right now (used by the dispatch job, not exposed via API) ----
 
-  dueNow: (frequency: "DAILY" | "WEEKLY", dayOfWeek: number, timeOfDay: string) =>
+  dueNow: (
+    frequency: "DAILY" | "WEEKLY",
+    dayOfWeek: number,
+    timeOfDay: string,
+    ignoreSchedule = false,
+  ) =>
     query<ErpReportSubscription>(
       `SELECT id, ias_company_id AS "iasCompanyId", channel, frequency,
               day_of_week AS "dayOfWeek", time_of_day AS "timeOfDay",
@@ -116,9 +121,9 @@ export const reportDeliveryRepository = {
        FROM erp_report_subscriptions
        WHERE enabled = TRUE
          AND frequency = $1
-         AND ($1 <> 'WEEKLY' OR day_of_week = $2)
-         AND time_of_day = $3`,
-      [frequency, dayOfWeek, timeOfDay],
+         AND ($4::boolean OR $1 <> 'WEEKLY' OR day_of_week = $2)
+         AND ($4::boolean OR time_of_day = $3)`,
+      [frequency, dayOfWeek, timeOfDay, ignoreSchedule],
     ),
 
   // ---- snapshots (written by the snapshot job, read by dispatch) ----
