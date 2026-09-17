@@ -8,8 +8,8 @@ import { dispatchReports } from "./jobs/dispatch-reports.job.js";
 export function startReportDeliveryScheduler(): void {
   if (!env.reportDeliveryEnabled) return;
 
-  // Shortly after midnight UTC: yesterday's data is final, safe to snapshot.
-  cron.schedule("15 0 * * *", () => {
+  // Refresh snapshots before dispatch so current-day sales are included.
+  cron.schedule("*/15 * * * *", () => {
     buildSnapshots().catch((err) =>
       console.error("report-delivery: buildSnapshots crashed", err),
     );

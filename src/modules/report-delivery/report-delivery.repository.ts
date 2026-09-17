@@ -160,6 +160,19 @@ export const reportDeliveryRepository = {
       [companyId, periodType],
     ),
 
+  latestSnapshotByQuery: (companyId: number, periodType?: "DAILY" | "WEEKLY") =>
+    queryOne<ErpReportSnapshot>(
+      `SELECT id, ias_company_id AS "iasCompanyId", period_type AS "periodType",
+              period_start AS "periodStart", period_end AS "periodEnd",
+              data, generated_at AS "generatedAt"
+       FROM erp_report_snapshots
+       WHERE ias_company_id = $1
+         AND ($2::text IS NULL OR period_type = $2)
+       ORDER BY period_end DESC, generated_at DESC
+       LIMIT 1`,
+      [companyId, periodType ?? null],
+    ),
+
   // Every company currently active, for the snapshot job to iterate over.
   companiesWithActiveSubscriptions: () =>
     query<{ iasCompanyId: number }>(

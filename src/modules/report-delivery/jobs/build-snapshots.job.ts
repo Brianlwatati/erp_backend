@@ -48,20 +48,17 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-// Run once daily (e.g. shortly after midnight). Builds both the daily
-// snapshot (yesterday, since "today" isn't complete yet) and a rolling
-// 7-day weekly snapshot ending yesterday, for every company that has at
-// least one enabled subscription. Dispatch always grabs the latest
-// snapshot of the right period type, so it doesn't need to know which
-// day of the week this ran on.
+// Builds the current daily snapshot and a rolling 7-day weekly snapshot for
+// every company that has at least one enabled subscription. This runs
+// repeatedly so reports include sales made during the current day.
 export async function buildSnapshots(): Promise<void> {
-  const companies = await reportDeliveryRepository.companiesWithActiveSubscriptions();
+  const companies =
+    await reportDeliveryRepository.companiesWithActiveSubscriptions();
 
-  const yesterday = new Date();
-  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-  const dailyDate = isoDate(yesterday);
+  const today = new Date();
+  const dailyDate = isoDate(today);
 
-  const weekStart = new Date(yesterday);
+  const weekStart = new Date(today);
   weekStart.setUTCDate(weekStart.getUTCDate() - 6);
   const weeklyStart = isoDate(weekStart);
 
@@ -86,7 +83,10 @@ export async function buildSnapshots(): Promise<void> {
       );
     } catch (err) {
       // One company's aggregation failing shouldn't block the rest.
-      console.error(`report-delivery: snapshot build failed for company ${iasCompanyId}`, err);
+      console.error(
+        `report-delivery: snapshot build failed for company ${iasCompanyId}`,
+        err,
+      );
     }
   }
 }
